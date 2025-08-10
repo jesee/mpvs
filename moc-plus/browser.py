@@ -1,30 +1,64 @@
-from textual.app import App, ComposeResult
-from textual.screen import Screen
-from textual.widgets import DirectoryTree, Footer, Header
 import os
+from pathlib import Path
+from textual.app import ComposeResult
+from textual.screen import Screen
+from textual.widgets import Footer, Header, ListView, ListItem, Static
 
 class FileBrowserScreen(Screen):
-    """一个用于浏览文件系统并与播放列表交互的屏幕。"""
+    """一个扁平的、类似 mocp 的文件/目录列表浏览器。"""
     BINDINGS = [
         ("escape", "app.pop_screen", "Back"),
         ("a", "add_to_playlist", "Add to Playlist"),
     ]
 
+    def __init__(self, start_path: str = "~"):
+        super().__init__()
+        self.current_path = Path(start_path).expanduser().resolve()
+
     def compose(self) -> ComposeResult:
-        """创建此屏幕的组件。"""
         yield Header(name="File Browser")
-        # 使用 Textual 内置的 DirectoryTree 组件
-        yield DirectoryTree(os.path.expanduser("~"), id="dir_tree")
+        yield ListView(id="dir_list")
         yield Footer()
+
+    def on_mount(self) -> None:
+        self.load_directory()
+
+    def load_directory(self):
+        """读取当前路径并填充 ListView。"""
+        self.sub_title = str(self.current_path)
+        list_view = self.query_one(ListView)
+        list_view.clear()
+
+        # 添加返回上级目录的选项
+        parent_item = ListItem(Static("[..]"))
+        parent_item.data = self.current_path.parent
+        list_view.append(parent_item)
+
+        items = []
+        try:
+            for item_path in sorted(self.current_path.iterdir()):
+                if item_path.is_dir():
+                    list_item = ListItem(Static(f"[D] {item_path.name}"))
+                else:
+                    list_item = ListItem(Static(f"[F] {item_path.name}"))
+                list_item.data = item_path
+                items.append(list_item)
+        except OSError:
+            pass
+        
+        list_view.extend(items)
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """当用户按回车时调用。"""
+        if hasattr(event.item, 'data'):
+            path_to_load = event.item.data
+            if path_to_load and path_to_load.is_dir():
+                self.current_path = path_to_load
+                self.load_directory()
 
     def action_add_to_playlist(self) -> None:
         """当用户按下 'a' 键时调用。"""
-        tree = self.query_one(DirectoryTree)
-        if not tree.cursor_node:
-            return
-
-        path = tree.cursor_node.data.path
-        
-        # 通过主应用的回调来处理添加逻辑
-        # 这是一个健壮的设计，避免了屏幕直接修改播放列表
-        self.app.add_path_to_playlist(str(path))
+        list_view = self.query_one(ListView)
+        if list_view.highlighted_child and hasattr(list_view.highlighted_child, 'data'):
+            path_to_add = list_view.highlighted_child.data
+            self.app.add_path_to_playlist(str(path_to_add))
