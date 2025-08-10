@@ -238,7 +238,6 @@ class MocPlusApp(App):
                 self.status_text = f"Selected: {event.item.song_data.title}"
     def on_song_item_clicked(self, event: SongItem.Clicked) -> None:
         """监听我们自定义的 SongItem.Clicked 消息。"""
-        # 通过 event.item.parent 访问父组件 ListView
         if isinstance(event.item.parent, ListView) and event.item.parent.id == "playlist_listview":
             current_click_time = time.time()
             if (current_click_time - self.last_click_time < 0.5) and (self.last_clicked_item is event.item):
@@ -249,6 +248,16 @@ class MocPlusApp(App):
                         self.status_text = f"Playing: {song_to_play.title}"
             self.last_click_time = current_click_time
             self.last_clicked_item = event.item
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """当用户在主播放列表上按回车时调用。"""
+        if event.list_view.id == "playlist_listview":
+            if hasattr(event.item, 'song_data'):
+                song_to_play: Song = event.item.song_data
+                if self.player:
+                    self.player.play(song_to_play.path)
+                    self.status_text = f"Playing: {song_to_play.title}"
+
     def watch_status_text(self, new_text: str) -> None:
         self.query_one("#status_bar", Static).update(new_text)
     def action_quit(self) -> None:
