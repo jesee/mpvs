@@ -86,6 +86,11 @@ class Playlist:
                         self.songs.append(Song(title=title, path=path))
                     title = "" # 重置标题
 
+    def delete_song(self, index: int):
+        """按索引删除一首歌曲。"""
+        if 0 <= index < len(self.songs):
+            del self.songs[index]
+
     def save_m3u(self, filepath: str):
         """将当前播放列表保存到 .m3u 文件。"""
         # 确保目录存在

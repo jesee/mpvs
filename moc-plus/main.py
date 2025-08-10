@@ -77,6 +77,7 @@ class MocPlusApp(App):
         ("s", "push_screen('search')", "Search"),
         ("p", "toggle_pause", "Play/Pause"),
         ("r", "import_from_folders", "Import from Folders"),
+        ("delete", "delete_song", "Delete Song"),
         ("ctrl+s", "show_save_screen", "Save Playlist"),
         ("ctrl+o", "show_load_screen", "Load Playlist"),
     ]
@@ -203,6 +204,25 @@ class MocPlusApp(App):
         self.playlist.scan_directory(self.downloads_dir)
         self._update_playlist_view()
         self.status_text = "Imported songs from local folders. Press Ctrl+S to save."
+
+    def action_delete_song(self) -> None:
+        """删除当前选中的歌曲。"""
+        list_view = self.query_one("#playlist_listview", ListView)
+        if list_view.highlighted_child is None:
+            return
+        
+        index_to_delete = list_view.index
+        if index_to_delete is None:
+            return
+
+        self.playlist.delete_song(index_to_delete)
+        self._update_playlist_view()
+        
+        if self.playlist.songs:
+            new_index = min(index_to_delete, len(self.playlist.songs) - 1)
+            list_view.index = new_index
+        
+        self.status_text = "Song removed. Press Ctrl+S to save changes."
 
     def on_key(self, event: "events.Key") -> None:
         """捕获所有未被处理的按键事件。"""
