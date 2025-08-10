@@ -29,6 +29,49 @@ from player import Player
 from playlist import Playlist, Song
 
 
+# --- 歌词屏幕 ---
+
+class LyricsScreen(Screen):
+    """用于显示当前歌曲歌词的屏幕。"""
+    BINDINGS = [
+        ("escape", "app.pop_screen", "Back"),
+        ("l", "app.pop_screen", "Back"), # L键也可以返回
+    ]
+
+    def __init__(self, current_song: Optional[Song] = None):
+        super().__init__()
+        self.current_song = current_song
+
+    def compose(self) -> ComposeResult:
+        yield Header(name="Lyrics Viewer")
+        with VerticalScroll(id="lyrics_container"):
+            yield Static("Loading lyrics...", id="lyrics_text")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """当屏幕挂载时，加载并显示歌词。"""
+        lyrics_widget = self.query_one("#lyrics_text", Static)
+        if not self.current_song:
+            lyrics_widget.update("No song is currently playing.")
+            return
+
+        self.app.sub_title = self.current_song.title
+        
+        # 构建 .lrc 文件路径
+        song_path = self.current_song.path
+        lrc_path = os.path.splitext(song_path)[0] + ".lrc"
+
+        if os.path.exists(lrc_path):
+            try:
+                with open(lrc_path, 'r', encoding='utf-8') as f:
+                    lyrics_content = f.read()
+                lyrics_widget.update(lyrics_content)
+            except Exception as e:
+                lyrics_widget.update(f"Error reading lyrics file:\n{e}")
+        else:
+            lyrics_widget.update("No lyrics file (.lrc) found for this song.")
+
+
 # --- 命令屏幕 ---
 
 class CommandScreen(Screen):
@@ -78,12 +121,14 @@ class MocPlusApp(App):
         ("p", "toggle_pause", "Play/Pause"),
         ("r", "import_from_folders", "Import from Folders"),
         ("delete", "delete_song", "Delete Song"),
+        ("l", "toggle_lyrics", "Show Lyrics"),
         ("ctrl+s", "show_save_screen", "Save Playlist"),
         ("ctrl+o", "show_load_screen", "Load Playlist"),
     ]
     SCREENS = {
         "search": SearchScreen,
         "command": CommandScreen,
+        "lyrics": LyricsScreen,
     }
     CSS_PATH = "tui.css"
     status_text = var("STATUS: Welcome to MOC-Plus!")
@@ -204,6 +249,19 @@ class MocPlusApp(App):
         self.playlist.scan_directory(self.downloads_dir)
         self._update_playlist_view()
         self.status_text = "Imported songs from local folders. Press Ctrl+S to save."
+
+    def action_toggle_lyrics(self) -> None:
+        """显示或隐藏歌词屏幕。"""
+        if isinstance(self.screen, LyricsScreen):
+            self.pop_screen()
+        else:
+            list_view = self.query_one("#playlist_listview", ListView)
+            # 确保有高亮项，并且它有关联的歌曲数据
+            if list_view.highlighted_child and hasattr(list_view.highlighted_child, 'song_data'):
+                current_song = list_view.highlighted_child.song_data
+                self.push_screen(LyricsScreen(current_song))
+            else:
+                self.status_text = "Select a song to show lyrics."
 
     def action_delete_song(self) -> None:
         """删除当前选中的歌曲。"""

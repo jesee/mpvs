@@ -50,3 +50,15 @@ Input:focus {
 #command_input {
     margin: 1;
 }
+
+/* --- Lyrics Screen --- */
+#lyrics_container {
+    height: 1fr;
+    background: $panel;
+    border: heavy magenta;
+    padding: 1;
+}
+
+#lyrics_text {
+    width: 100%;
+}
