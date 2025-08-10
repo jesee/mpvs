@@ -61,4 +61,7 @@ Input:focus {
 
 #lyrics_text {
     width: 100%;
+    /* 为反色高亮提供一个坚实的背景 */
+    background: $panel-darken-1;
+    color: $text;
 }
