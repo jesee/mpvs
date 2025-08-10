@@ -95,44 +95,104 @@ class CommandScreen(Screen):
 
 # --- 搜索屏幕 ---
 class SearchScreen(Screen):
-    BINDINGS = [("escape", "app.pop_screen", "Back"), ("n", "next_page", "Next Page"), ("p", "previous_page", "Prev Page"), ("a", "download_all", "Download All")]
+    BINDINGS = [
+        ("escape", "app.pop_screen", "Back"),
+        ("n", "next_page", "Next Page"),
+        ("p", "previous_page", "Prev Page"),
+        ("a", "download_all", "Download All"),
+        # Enter is now handled by the App's on_list_view_selected
+    ]
+
     def __init__(self):
-        super().__init__(); self.current_page = 1; self.total_pages = 1; self.current_query = ""
+        super().__init__()
+        self.current_page = 1
+        self.total_pages = 1
+        self.current_query = ""
+        self.last_click_time = 0
+        self.last_clicked_item = None
+
     def compose(self) -> ComposeResult:
-        yield Header(name="Search Online Music"); yield Input(placeholder="Enter song or artist name...")
-        with VerticalScroll(id="search_results_view"): yield ListView(id="search_results_list")
+        yield Header(name="Search Online Music")
+        yield Input(placeholder="Enter song or artist name...")
+        with VerticalScroll(id="search_results_view"):
+            yield ListView(id="search_results_list")
         yield Footer()
-    def on_mount(self) -> None: self.query_one(Input).focus()
+
+    def on_mount(self) -> None:
+        self.query_one(Input).focus()
+
     def start_search(self, query: str, page: int = 1) -> None:
-        self.query_one("#search_results_list", ListView).clear(); self.query_one(Input).disabled = True
-        self.app.sub_title = f"Searching for '{query}' on page {page}..."; thread = threading.Thread(target=self.search_worker, args=[query, page]); thread.start()
+        self.query_one("#search_results_list", ListView).clear()
+        self.query_one(Input).disabled = True
+        self.app.sub_title = f"Searching for '{query}' on page {page}..."
+        thread = threading.Thread(target=self.search_worker, args=[query, page])
+        thread.start()
+
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        self.current_query = event.value; self.current_page = 1; self.total_pages = 1; self.start_search(self.current_query, self.current_page)
+        self.current_query = event.value
+        self.current_page = 1
+        self.total_pages = 1
+        self.start_search(self.current_query, self.current_page)
+
     def search_worker(self, query: str, page: int):
-        try: result = downloader.search_songs(query, page)
-        except Exception as e: result = e
+        try:
+            result = downloader.search_songs(query, page)
+        except Exception as e:
+            result = e
         self.app.call_from_thread(self.app.on_search_finished, result)
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if not hasattr(event.item, "song_data"): return
-        song_data = event.item.song_data; self.app.sub_title = f"Downloading '{song_data['title']}'..."
-        thread = threading.Thread(target=self.download_worker, args=[[song_data]]); thread.start()
+
     def download_worker(self, songs_to_download: list[dict]):
-        downloaded_count = 0; errors = []
+        downloaded_count = 0
+        errors = []
         download_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "downloads"))
         for song_data in songs_to_download:
             try:
-                song_info = downloader.get_song_info(song_data["id"]); downloader.download_song_and_lrc(song_info, download_dir); downloaded_count += 1
-            except Exception: errors.append(song_data["title"])
-        result = (downloaded_count, errors); self.app.call_from_thread(self.app.on_download_finished, result)
+                song_info = downloader.get_song_info(song_data["id"])
+                downloader.download_song_and_lrc(song_info, download_dir)
+                downloaded_count += 1
+            except Exception:
+                errors.append(song_data["title"])
+        result = (downloaded_count, errors)
+        self.app.call_from_thread(self.app.on_download_finished, result)
+
+    def _trigger_download(self, item: ListItem):
+        """触发单曲下载的通用方法。"""
+        if not hasattr(item, "song_data"): return
+        song_data = item.song_data
+        self.app.sub_title = f"Downloading '{song_data['title']}'..."
+        thread = threading.Thread(target=self.download_worker, args=[[song_data]])
+        thread.start()
+
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        """当用户选择一项时更新副标题。"""
+        if event.item and hasattr(event.item, "song_data"):
+            self.app.sub_title = f"Selected: {event.item.song_data['title']}"
+
+    def on_song_item_clicked(self, event: SongItem.Clicked) -> None:
+        """处理双击下载。"""
+        current_click_time = time.time()
+        if (current_click_time - self.last_click_time < 0.5) and (self.last_clicked_item is event.item):
+            self._trigger_download(event.item)
+        self.last_click_time = current_click_time
+        self.last_clicked_item = event.item
+
     def action_next_page(self) -> None:
-        if self.current_page < self.total_pages: self.current_page += 1; self.start_search(self.current_query, self.current_page)
+        if self.current_page < self.total_pages:
+            self.current_page += 1
+            self.start_search(self.current_query, self.current_page)
+
     def action_previous_page(self) -> None:
-        if self.current_page > 1: self.current_page -= 1; self.start_search(self.current_query, self.current_page)
+        if self.current_page > 1:
+            self.current_page -= 1
+            self.start_search(self.current_query, self.current_page)
+
     def action_download_all(self) -> None:
         list_view = self.query_one("#search_results_list", ListView)
         songs_on_page = [child.song_data for child in list_view.children if hasattr(child, "song_data")]
         if not songs_on_page: return
-        self.app.sub_title = f"Queueing {len(songs_on_page)} songs for download..."; thread = threading.Thread(target=self.download_worker, args=[songs_on_page]); thread.start()
+        self.app.sub_title = f"Queueing {len(songs_on_page)} songs for download..."
+        thread = threading.Thread(target=self.download_worker, args=[songs_on_page])
+        thread.start()
 
 # --- 主应用 ---
 class MocPlusApp(App):
@@ -146,6 +206,7 @@ class MocPlusApp(App):
         ("c", "clear_playlist", "Clear Playlist"),
         ("s", "show_save_screen", "Save Playlist"),
         ("o", "push_screen('browser')", "Open..."),
+        ("enter", "select_song", "Play Selected"),
     ]
     SCREENS = {"search": SearchScreen, "command": CommandScreen, "lyrics": LyricsScreen, "browser": FileBrowserScreen}
     CSS_PATH = "tui.css"
@@ -166,18 +227,26 @@ class MocPlusApp(App):
         self.player = Player(); self.action_load_playlist(self.playlist_path); self.query_one("#playlist_listview").focus()
     def on_search_finished(self, result) -> None:
         if not isinstance(self.screen, SearchScreen): return
-        search_screen = self.screen; list_view = search_screen.query_one("#search_results_list", ListView)
-        input_widget = search_screen.query_one(Input); input_widget.disabled = False
+        search_screen = self.screen
+        list_view = search_screen.query_one("#search_results_list", ListView)
+        input_widget = search_screen.query_one(Input)
+        input_widget.disabled = False
         if isinstance(result, Exception):
-            self.sub_title = f"Search failed: {result}"; list_view.append(ListItem(Static(f"Error: {result}")))
+            self.sub_title = f"Search failed: {result}"
+            list_view.append(ListItem(Static(f"Error: {result}")))
         else:
-            search_results, total_pages, total_songs = result; search_screen.total_pages = total_pages
+            search_results, total_pages, total_songs = result
+            search_screen.total_pages = total_pages
             self.sub_title = f"Found {total_songs} songs | Page {search_screen.current_page}/{total_pages}"
-            if not search_results: list_view.append(ListItem(Static("No results found.")))
+            if not search_results:
+                list_view.append(ListItem(Static("No results found.")))
             else:
                 for song in search_results:
-                    list_item = SongItem(Song(title=song['title'], path="")); list_item.song_data = song; list_view.append(list_item)
-        input_widget.focus()
+                    list_item = SongItem(Song(title=song['title'], path=""))
+                    list_item.song_data = song
+                    list_view.append(list_item)
+        # 搜索完成后，自动聚焦到结果列表
+        list_view.focus()
     def on_download_finished(self, result) -> None:
         downloaded_count, errors = result; new_songs_playlist = Playlist()
         new_songs_playlist.scan_directory(self.downloads_dir); added_count = 0
@@ -196,7 +265,11 @@ class MocPlusApp(App):
         else:
             for song in self.playlist.songs: list_view.append(SongItem(song))
     def action_clear_playlist(self) -> None:
-        self.playlist.clear(); self._update_playlist_view(); self.status_text = "Playlist cleared. Press Ctrl+S to save."
+        """清空播放列表并立即保存这个状态。"""
+        self.playlist.clear()
+        self.playlist.save_m3u(self.playlist_path)
+        self._update_playlist_view()
+        self.status_text = f"Playlist cleared and saved to {self.playlist_path}"
     def action_show_load_screen(self): self.push_screen(CommandScreen("Load playlist from:", self.playlist_path, self.action_load_playlist))
     def action_show_save_screen(self): self.push_screen(CommandScreen("Save playlist as:", self.playlist_path, self.action_save_playlist))
     def action_load_playlist(self, path: str):
@@ -232,23 +305,47 @@ class MocPlusApp(App):
             if event.item and hasattr(event.item, 'song_data'):
                 self.status_text = f"Selected: {event.item.song_data.title}"
     def on_song_item_clicked(self, event: SongItem.Clicked) -> None:
+        """监听我们自定义的 SongItem.Clicked 消息，处理双击。"""
+        # 双击下载
+        if isinstance(event.item.parent, ListView) and event.item.parent.id == "search_results_list":
+            current_click_time = time.time()
+            if (current_click_time - self.last_click_time < 0.5) and (self.last_clicked_item is event.item):
+                if hasattr(event.item, "song_data"):
+                    # Mypy doesn't know about screen attributes, so we ignore the type error
+                    self.screen._trigger_download(event.item) # type: ignore
+            self.last_click_time = current_click_time
+            self.last_clicked_item = event.item
+            return
+
+        # 双击播放
         if isinstance(event.item.parent, ListView) and event.item.parent.id == "playlist_listview":
             current_click_time = time.time()
             if (current_click_time - self.last_click_time < 0.5) and (self.last_clicked_item is event.item):
                 if hasattr(event.item, 'song_data'):
                     song_to_play: Song = event.item.song_data
-                    if self.player: self.player.play(song_to_play.path); self.status_text = f"Playing: {song_to_play.title}"
-            self.last_click_time = current_click_time; self.last_clicked_item = event.item
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if event.list_view.id == "playlist_listview":
-            if hasattr(event.item, 'song_data'):
-                song_to_play: Song = event.item.song_data
-                if self.player: self.player.play(song_to_play.path); self.status_text = f"Playing: {song_to_play.title}"
+                    if self.player:
+                        self.player.play(song_to_play.path)
+                        self.status_text = f"Playing: {song_to_play.title}"
+            self.last_click_time = current_click_time
+            self.last_clicked_item = event.item
+
+    def action_select_song(self) -> None:
+        """处理主播放列表上的回车键事件。"""
+        list_view = self.query_one("#playlist_listview", ListView)
+        if list_view.highlighted_child and hasattr(list_view.highlighted_child, 'song_data'):
+            song_to_play: Song = list_view.highlighted_child.song_data
+            if self.player:
+                self.player.play(song_to_play.path)
+                self.status_text = f"Playing: {song_to_play.title}"
+
     def watch_status_text(self, new_text: str) -> None:
         self.query_one("#status_bar", Static).update(new_text)
     def action_quit(self) -> None:
+        """退出前自动保存播放列表。"""
+        self.status_text = "Saving playlist..."
+        self.playlist.save_m3u(self.playlist_path)
         if self.player: self.player.quit()
-        self.exit()
+        self.exit("Playlist saved. Goodbye!")
     
     # --- 新增的文件浏览器交互 ---
     def add_path_to_playlist(self, path: str):
