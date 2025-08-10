@@ -29,6 +29,9 @@ class FileBrowserScreen(Screen):
         list_view = self.query_one(ListView)
         list_view.clear()
 
+        # 定义我们关心的文件扩展名
+        music_extensions = {".mp3", ".flac", ".wav", ".aac", ".ogg", ".m4a", ".m3u"}
+
         # 添加返回上级目录的选项
         parent_item = ListItem(Static("[..]"))
         parent_item.data = self.current_path.parent
@@ -37,12 +40,19 @@ class FileBrowserScreen(Screen):
         items = []
         try:
             for item_path in sorted(self.current_path.iterdir()):
+                # 忽略隐藏文件和文件夹
+                if item_path.name.startswith('.'):
+                    continue
+
                 if item_path.is_dir():
                     list_item = ListItem(Static(f"[D] {item_path.name}"))
-                else:
-                    list_item = ListItem(Static(f"[F] {item_path.name}"))
-                list_item.data = item_path
-                items.append(list_item)
+                    list_item.data = item_path
+                    items.append(list_item)
+                elif item_path.is_file():
+                    if item_path.suffix.lower() in music_extensions:
+                        list_item = ListItem(Static(f"[F] {item_path.name}"))
+                        list_item.data = item_path
+                        items.append(list_item)
         except OSError:
             pass
         
