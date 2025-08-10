@@ -91,6 +91,11 @@ class Playlist:
         if 0 <= index < len(self.songs):
             del self.songs[index]
 
+    def clear(self):
+        """清空整个播放列表。"""
+        self.songs.clear()
+        self.current_selection_index = 0
+
     def save_m3u(self, filepath: str):
         """将当前播放列表保存到 .m3u 文件。"""
         # 确保目录存在
