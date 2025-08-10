@@ -1,0 +1,12 @@
+2025-08-10 19:57:12,570 - INFO - 开始搜索，关键词: '周杰伦', 页码: 1
+2025-08-10 19:57:12,576 - INFO - 请求URL: https://www.dda5.com/so.php?wd=%E5%91%A8%E6%9D%B0%E4%BC%A6&page=1
+2025-08-10 19:57:13,293 - INFO - 收到响应，状态码: 200
+2025-08-10 19:57:13,293 - INFO - 开始使用lxml解析HTML...
+2025-08-10 19:57:13,305 - INFO - HTML解析完成。
+2025-08-10 19:57:13,307 - INFO - 找到 30 个歌曲项目。
+2025-08-10 19:57:13,311 - INFO - 搜索完成。找到歌曲: 30, 总页数: 15, 总歌曲: 440
+2025-08-10 19:57:13,311 - INFO - --- on_search_finished TRIGGERED ---
+2025-08-10 19:57:13,312 - INFO - Worker result type: <class 'tuple'>
+2025-08-10 19:57:13,312 - INFO - Search successful. Found 30 songs.
+2025-08-10 19:57:24,432 - INFO - --- on_download_finished TRIGGERED ---
+2025-08-10 19:57:25,452 - INFO - --- on_download_finished TRIGGERED ---

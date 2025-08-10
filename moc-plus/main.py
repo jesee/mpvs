@@ -4,12 +4,6 @@ import threading
 from functools import partial
 from typing import Optional
 
-# --- 日志配置 ---
-log_file = os.path.join(os.path.dirname(__file__), 'app.log')
-if os.path.exists(log_file):
-    os.remove(log_file)
-logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
 from textual.reactive import var
@@ -20,6 +14,12 @@ from textual.widgets import (Footer, Header, Input, ListItem, ListView,
 import downloader
 from player import Player
 from playlist import Playlist, Song
+
+# --- 日志配置 ---
+log_file = os.path.join(os.path.dirname(__file__), 'app.log')
+if os.path.exists(log_file):
+    os.remove(log_file)
+logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 # --- 搜索屏幕 ---
@@ -120,7 +120,7 @@ class MocPlusApp(App):
     BINDINGS = [
         ("q", "quit", "Quit"),
         ("s", "push_screen('search')", "Search"),
-        ("p", "toggle_pause", "Play/Pause"),
+        # 'p' is handled by on_key, 'enter' is handled by on_list_view_selected
         ("r", "refresh_playlist", "Refresh Playlist"),
     ]
     SCREENS = {"search": SearchScreen}
@@ -202,23 +202,23 @@ class MocPlusApp(App):
                 list_view.append(list_item)
         self.status_text = "Playlist refreshed. Select a song and press Enter."
 
+    def on_key(self, event: "events.Key") -> None:
+        """捕获所有未被处理的按键事件。"""
+        if event.key == "p":
+            self.action_toggle_pause()
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """当用户在任何ListView上按回车时调用。"""
+        # 通过检查ListView的ID来区分是在主屏幕还是搜索屏幕
+        if event.list_view.id == "playlist_listview":
+            if hasattr(event.item, 'song_data'):
+                song_to_play: Song = event.item.song_data
+                if self.player: 
+                    self.player.play(song_to_play.path)
+                    self.status_text = f"Playing: {song_to_play.title}"
+
     def watch_status_text(self, new_text: str) -> None:
         self.query_one("#status_bar", Static).update(new_text)
-
-    def action_quit(self) -> None:
-        if self.player: self.player.quit()
-        self.exit()
-
-    def action_toggle_pause(self) -> None:
-        self.status_text = "Pause/Play is not available in this mode."
-
-    def action_select_song(self) -> None:
-        list_view = self.query_one("#playlist_listview", ListView)
-        if list_view.highlighted_child and hasattr(list_view.highlighted_child, 'song_data'):
-            song_to_play: Song = list_view.highlighted_child.song_data
-            if self.player: 
-                self.player.play(song_to_play.path)
-                self.status_text = f"Playing: {song_to_play.title}"
 
 def main():
     app = MocPlusApp()

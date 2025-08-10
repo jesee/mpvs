@@ -3,8 +3,8 @@ import os
 
 class Player:
     """
-    一个使用 subprocess 直接调用 mpv 的简单播放器。
-    这种方法牺牲了精细控制，但换取了最大的稳定性，避免了事件循环冲突。
+    一个回归本源的、使用 subprocess 直接调用 mpv 的简单播放器。
+    这个版本只关心最核心的播放功能，以确保最大的稳定性和兼容性。
     """
     def __init__(self):
         self.process = None
@@ -13,15 +13,12 @@ class Player:
         """
         播放一个文件。如果已有歌曲在播放，会先停止。
         """
-        if self.process:
-            self.stop()
+        self.stop()
         
-        # 确保文件存在
         if not os.path.exists(filepath):
             return
 
-        # 使用 subprocess.Popen 启动一个完全独立的 mpv 进程
-        # 我们将 stdout 和 stderr 重定向，以避免它们干扰我们的 TUI
+        # 使用最基础、最可靠的方式启动 mpv
         self.process = subprocess.Popen(
             ['mpv', filepath],
             stdout=subprocess.DEVNULL,
@@ -32,13 +29,11 @@ class Player:
         """
         停止播放（通过终止 mpv 进程）。
         """
-        if self.process:
+        if self.process and self.process.poll() is None:
             self.process.terminate()
             try:
-                # 等待一小段时间确保进程已终止
                 self.process.wait(timeout=0.5)
             except subprocess.TimeoutExpired:
-                # 如果没有正常终止，就强制杀死
                 self.process.kill()
             self.process = None
 
@@ -47,3 +42,10 @@ class Player:
         退出播放器时，确保停止所有播放。
         """
         self.stop()
+
+    def toggle_pause(self):
+        """
+        在这个简单的模式下，暂停功能是不可用的。
+        """
+        # 明确地不执行任何操作
+        pass
