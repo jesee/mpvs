@@ -137,11 +137,15 @@ class SearchScreen(Screen):
 # --- 主应用 ---
 class MocPlusApp(App):
     BINDINGS = [
-        ("q", "quit", "Quit"), ("s", "push_screen('search')", "Search"),
-        ("p", "toggle_pause", "Play/Pause"), ("l", "toggle_lyrics", "Show Lyrics"),
-        ("r", "import_from_folders", "Import from Folders"), ("delete", "delete_song", "Delete Song"),
+        ("q", "quit", "Quit"),
+        ("/", "push_screen('search')", "Search"),
+        ("p", "toggle_pause", "Play/Pause"),
+        ("l", "toggle_lyrics", "Show Lyrics"),
+        ("r", "import_from_folders", "Import from Folders"),
+        ("delete", "delete_song", "Delete Song"),
         ("c", "clear_playlist", "Clear Playlist"),
-        ("ctrl+s", "show_save_screen", "Save Playlist"), ("ctrl+o", "push_screen('browser')", "Open..."),
+        ("s", "show_save_screen", "Save Playlist"),
+        ("o", "push_screen('browser')", "Open..."),
     ]
     SCREENS = {"search": SearchScreen, "command": CommandScreen, "lyrics": LyricsScreen, "browser": FileBrowserScreen}
     CSS_PATH = "tui.css"
