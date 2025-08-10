@@ -1,6 +1,6 @@
-# MOC-Plus: A Modern Terminal Music Player
+# MPVS: A Modern Terminal Music Player
 
-`MOC-Plus` 是一款功能强大的、在终端中运行的音乐播放器，其灵感来源于经典的 MOC (Music On Console)。它旨在提供一个现代化的、交互友好的 TUI (文本用户界面)，并整合了在线音乐搜索、下载、以及精准的歌词同步功能。
+`MPVS` 是一款功能强大的、在终端中运行的音乐播放器，其灵感来源于经典的 MOC (Music On Console)。它旨在提供一个现代化的、交互友好的 TUI (文本用户界面)，并整合了在线音乐搜索、下载、以及精准的歌词同步功能。
 
 ![screenshot](https://user-images.githubusercontent.com/554369/228858933-58d37a6c-8654-41d5-92a3-290f3531b6e1.gif)
 
@@ -29,7 +29,7 @@
 
 **依赖:**
 
-在安装 `MOC-Plus` 之前，你必须在你的系统上安装 `mpv`。
+在安装 `MPVS` 之前，你必须在你的系统上安装 `mpv`。
 
 -   **Debian/Ubuntu**: `sudo apt update && sudo apt install mpv`
 -   **Arch Linux**: `sudo pacman -S mpv`
