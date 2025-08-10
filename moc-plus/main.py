@@ -10,33 +10,25 @@ from textual.containers import VerticalScroll
 from textual.message import Message
 from textual.reactive import var
 from textual.screen import Screen
-from textual.widgets import (
-    Footer,
-    Header,
-    Input,
-    ListItem,
-    ListView,
-    Static,
-)
+from textual.widgets import (Footer, Header, Input, ListItem, ListView,
+                             Static)
 
+# 导入我们自己的模块
 import downloader
+from browser import FileBrowserScreen
 from player import Player
 from playlist import Playlist, Song
 
 # --- 自定义 ListItem 和消息 ---
 class SongItem(ListItem):
     class Clicked(Message):
-        """当一个 SongItem 被点击时发出的消息。"""
         def __init__(self, item: "SongItem") -> None:
             self.item = item
             super().__init__()
-
     def __init__(self, song: Song):
         super().__init__(Static(song.title))
         self.song_data = song
-
     def on_click(self) -> None:
-        """当这个组件被点击时，发出我们自定义的 Clicked 消息。"""
         self.post_message(self.Clicked(self))
 
 # --- 歌词屏幕 ---
@@ -149,9 +141,9 @@ class MocPlusApp(App):
         ("p", "toggle_pause", "Play/Pause"), ("l", "toggle_lyrics", "Show Lyrics"),
         ("r", "import_from_folders", "Import from Folders"), ("delete", "delete_song", "Delete Song"),
         ("c", "clear_playlist", "Clear Playlist"),
-        ("ctrl+s", "show_save_screen", "Save Playlist"), ("ctrl+o", "show_load_screen", "Load Playlist"),
+        ("ctrl+s", "show_save_screen", "Save Playlist"), ("ctrl+o", "push_screen('browser')", "Open..."),
     ]
-    SCREENS = {"search": SearchScreen, "command": CommandScreen, "lyrics": LyricsScreen}
+    SCREENS = {"search": SearchScreen, "command": CommandScreen, "lyrics": LyricsScreen, "browser": FileBrowserScreen}
     CSS_PATH = "tui.css"
     status_text = var("STATUS: Welcome to MOC-Plus!")
 
@@ -180,7 +172,6 @@ class MocPlusApp(App):
             if not search_results: list_view.append(ListItem(Static("No results found.")))
             else:
                 for song in search_results:
-                    # 在搜索结果中也使用 SongItem
                     list_item = SongItem(Song(title=song['title'], path="")); list_item.song_data = song; list_view.append(list_item)
         input_widget.focus()
     def on_download_finished(self, result) -> None:
@@ -237,32 +228,48 @@ class MocPlusApp(App):
             if event.item and hasattr(event.item, 'song_data'):
                 self.status_text = f"Selected: {event.item.song_data.title}"
     def on_song_item_clicked(self, event: SongItem.Clicked) -> None:
-        """监听我们自定义的 SongItem.Clicked 消息。"""
         if isinstance(event.item.parent, ListView) and event.item.parent.id == "playlist_listview":
             current_click_time = time.time()
             if (current_click_time - self.last_click_time < 0.5) and (self.last_clicked_item is event.item):
                 if hasattr(event.item, 'song_data'):
                     song_to_play: Song = event.item.song_data
-                    if self.player:
-                        self.player.play(song_to_play.path)
-                        self.status_text = f"Playing: {song_to_play.title}"
-            self.last_click_time = current_click_time
-            self.last_clicked_item = event.item
-
+                    if self.player: self.player.play(song_to_play.path); self.status_text = f"Playing: {song_to_play.title}"
+            self.last_click_time = current_click_time; self.last_clicked_item = event.item
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        """当用户在主播放列表上按回车时调用。"""
         if event.list_view.id == "playlist_listview":
             if hasattr(event.item, 'song_data'):
                 song_to_play: Song = event.item.song_data
-                if self.player:
-                    self.player.play(song_to_play.path)
-                    self.status_text = f"Playing: {song_to_play.title}"
-
+                if self.player: self.player.play(song_to_play.path); self.status_text = f"Playing: {song_to_play.title}"
     def watch_status_text(self, new_text: str) -> None:
         self.query_one("#status_bar", Static).update(new_text)
     def action_quit(self) -> None:
         if self.player: self.player.quit()
         self.exit()
+    
+    # --- 新增的文件浏览器交互 ---
+    def add_path_to_playlist(self, path: str):
+        """由 FileBrowserScreen 调用的回调函数。"""
+        added_count = 0
+        initial_count = len(self.playlist.songs)
+
+        if os.path.isdir(path):
+            self.playlist.scan_directory(path, append=True)
+        elif os.path.isfile(path):
+            if path.lower().endswith(".m3u"):
+                self.playlist.load_m3u(path, append=True)
+            elif any(path.lower().endswith(ext) for ext in playlist.SUPPORTED_EXTENSIONS):
+                # 避免重复添加
+                if not any(song.path == path for song in self.playlist.songs):
+                    title = os.path.splitext(os.path.basename(path))[0]
+                    self.playlist.songs.append(Song(title=title, path=path))
+        
+        added_count = len(self.playlist.songs) - initial_count
+        if added_count > 0:
+            self.status_text = f"Added {added_count} song(s). Press Ctrl+S to save."
+            self._update_playlist_view()
+        else:
+            self.status_text = "No new songs were added."
+        self.pop_screen() # 添加后自动返回主屏幕
 
 def main():
     app = MocPlusApp()
