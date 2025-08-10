@@ -1,0 +1,76 @@
+2025-08-10 19:27:22,809 - INFO - 开始搜索，关键词: '斗破苍穹', 页码: 1
+2025-08-10 19:27:22,817 - INFO - 请求URL: https://www.dda5.com/so.php?wd=%E6%96%97%E7%A0%B4%E8%8B%8D%E7%A9%B9&page=1
+2025-08-10 19:27:23,767 - INFO - 收到响应，状态码: 200
+2025-08-10 19:27:23,767 - INFO - 开始使用lxml解析HTML...
+2025-08-10 19:27:23,779 - INFO - HTML解析完成。
+2025-08-10 19:27:23,781 - INFO - 找到 30 个歌曲项目。
+2025-08-10 19:27:23,785 - INFO - 搜索完成。找到歌曲: 30, 总页数: 16, 总歌曲: 480
+2025-08-10 19:27:23,786 - INFO - --- on_search_finished TRIGGERED ---
+2025-08-10 19:27:23,787 - INFO - Worker result type: <class 'tuple'>
+2025-08-10 19:27:23,787 - INFO - Search successful. Found 30 songs.
+2025-08-10 19:27:29,955 - INFO - --- on_download_finished TRIGGERED ---
+2025-08-10 19:27:36,246 - INFO - 开始搜索，关键词: '斗破苍穹', 页码: 2
+2025-08-10 19:27:36,254 - INFO - 请求URL: https://www.dda5.com/so.php?wd=%E6%96%97%E7%A0%B4%E8%8B%8D%E7%A9%B9&page=2
+2025-08-10 19:27:36,786 - INFO - 收到响应，状态码: 200
+2025-08-10 19:27:36,786 - INFO - 开始使用lxml解析HTML...
+2025-08-10 19:27:36,798 - INFO - HTML解析完成。
+2025-08-10 19:27:36,800 - INFO - 找到 30 个歌曲项目。
+2025-08-10 19:27:36,803 - INFO - 搜索完成。找到歌曲: 30, 总页数: 16, 总歌曲: 480
+2025-08-10 19:27:36,803 - INFO - --- on_search_finished TRIGGERED ---
+2025-08-10 19:27:36,805 - INFO - Worker result type: <class 'tuple'>
+2025-08-10 19:27:36,805 - INFO - Search successful. Found 30 songs.
+2025-08-10 19:27:43,353 - INFO - 开始搜索，关键词: '斗破苍穹', 页码: 3
+2025-08-10 19:27:43,361 - INFO - 请求URL: https://www.dda5.com/so.php?wd=%E6%96%97%E7%A0%B4%E8%8B%8D%E7%A9%B9&page=3
+2025-08-10 19:27:43,829 - INFO - 收到响应，状态码: 200
+2025-08-10 19:27:43,829 - INFO - 开始使用lxml解析HTML...
+2025-08-10 19:27:43,840 - INFO - HTML解析完成。
+2025-08-10 19:27:43,842 - INFO - 找到 30 个歌曲项目。
+2025-08-10 19:27:43,845 - INFO - 搜索完成。找到歌曲: 30, 总页数: 16, 总歌曲: 480
+2025-08-10 19:27:43,846 - INFO - --- on_search_finished TRIGGERED ---
+2025-08-10 19:27:43,847 - INFO - Worker result type: <class 'tuple'>
+2025-08-10 19:27:43,848 - INFO - Search successful. Found 30 songs.
+2025-08-10 19:27:45,276 - INFO - --- on_download_finished TRIGGERED ---
+2025-08-10 19:27:53,008 - INFO - --- on_download_finished TRIGGERED ---
+2025-08-10 19:27:57,822 - INFO - 开始搜索，关键词: '斗破苍穹', 页码: 4
+2025-08-10 19:27:57,829 - INFO - 请求URL: https://www.dda5.com/so.php?wd=%E6%96%97%E7%A0%B4%E8%8B%8D%E7%A9%B9&page=4
+2025-08-10 19:27:58,553 - INFO - 收到响应，状态码: 200
+2025-08-10 19:27:58,553 - INFO - 开始使用lxml解析HTML...
+2025-08-10 19:27:58,599 - INFO - HTML解析完成。
+2025-08-10 19:27:58,601 - INFO - 找到 30 个歌曲项目。
+2025-08-10 19:27:58,604 - INFO - 搜索完成。找到歌曲: 30, 总页数: 16, 总歌曲: 480
+2025-08-10 19:27:58,605 - INFO - --- on_search_finished TRIGGERED ---
+2025-08-10 19:27:58,606 - INFO - Worker result type: <class 'tuple'>
+2025-08-10 19:27:58,607 - INFO - Search successful. Found 30 songs.
+2025-08-10 19:28:10,788 - INFO - 开始搜索，关键词: '斗破苍穹', 页码: 3
+2025-08-10 19:28:10,796 - INFO - 请求URL: https://www.dda5.com/so.php?wd=%E6%96%97%E7%A0%B4%E8%8B%8D%E7%A9%B9&page=3
+2025-08-10 19:28:11,002 - INFO - 开始搜索，关键词: '斗破苍穹', 页码: 2
+2025-08-10 19:28:11,007 - INFO - 请求URL: https://www.dda5.com/so.php?wd=%E6%96%97%E7%A0%B4%E8%8B%8D%E7%A9%B9&page=2
+2025-08-10 19:28:11,383 - INFO - 收到响应，状态码: 200
+2025-08-10 19:28:11,383 - INFO - 开始使用lxml解析HTML...
+2025-08-10 19:28:11,394 - INFO - HTML解析完成。
+2025-08-10 19:28:11,396 - INFO - 找到 30 个歌曲项目。
+2025-08-10 19:28:11,399 - INFO - 搜索完成。找到歌曲: 30, 总页数: 16, 总歌曲: 480
+2025-08-10 19:28:11,399 - INFO - --- on_search_finished TRIGGERED ---
+2025-08-10 19:28:11,402 - INFO - Worker result type: <class 'tuple'>
+2025-08-10 19:28:11,402 - INFO - Search successful. Found 30 songs.
+2025-08-10 19:28:12,503 - INFO - 收到响应，状态码: 200
+2025-08-10 19:28:12,503 - INFO - 开始使用lxml解析HTML...
+2025-08-10 19:28:12,515 - INFO - HTML解析完成。
+2025-08-10 19:28:12,516 - INFO - 找到 30 个歌曲项目。
+2025-08-10 19:28:12,519 - INFO - 搜索完成。找到歌曲: 30, 总页数: 16, 总歌曲: 480
+2025-08-10 19:28:12,520 - INFO - --- on_search_finished TRIGGERED ---
+2025-08-10 19:28:12,520 - INFO - Worker result type: <class 'tuple'>
+2025-08-10 19:28:12,520 - INFO - Search successful. Found 30 songs.
+2025-08-10 19:28:13,500 - INFO - 开始搜索，关键词: '斗破苍穹', 页码: 1
+2025-08-10 19:28:13,508 - INFO - 请求URL: https://www.dda5.com/so.php?wd=%E6%96%97%E7%A0%B4%E8%8B%8D%E7%A9%B9&page=1
+2025-08-10 19:28:14,005 - INFO - 收到响应，状态码: 200
+2025-08-10 19:28:14,005 - INFO - 开始使用lxml解析HTML...
+2025-08-10 19:28:14,017 - INFO - HTML解析完成。
+2025-08-10 19:28:14,018 - INFO - 找到 30 个歌曲项目。
+2025-08-10 19:28:14,021 - INFO - 搜索完成。找到歌曲: 30, 总页数: 16, 总歌曲: 480
+2025-08-10 19:28:14,022 - INFO - --- on_search_finished TRIGGERED ---
+2025-08-10 19:28:14,023 - INFO - Worker result type: <class 'tuple'>
+2025-08-10 19:28:14,024 - INFO - Search successful. Found 30 songs.
+2025-08-10 19:28:29,112 - INFO - --- on_download_finished TRIGGERED ---
+2025-08-10 19:28:29,191 - INFO - --- on_download_finished TRIGGERED ---
+2025-08-10 19:29:50,927 - INFO - --- on_download_finished TRIGGERED ---
