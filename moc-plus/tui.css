@@ -39,3 +39,14 @@ Input {
 Input:focus {
     border: tall $accent;
 }
+
+/* --- Command Screen --- */
+#command_prompt {
+    padding: 1 1 0 1;
+    width: 100%;
+    text-align: center;
+}
+
+#command_input {
+    margin: 1;
+}

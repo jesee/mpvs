@@ -52,6 +52,77 @@ class Playlist:
             return
         self.current_selection_index = (self.current_selection_index - 1 + len(self.songs)) % len(self.songs)
 
+    def save_m3u(self, filepath: str):
+        """将当前播放列表保存到 .m3u 文件。"""
+        dir_path = os.path.dirname(filepath)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write('#EXTM3U\n')
+            for song in self.songs:
+                f.write(f'#EXTINF:-1,{song.title}\n')
+                f.write(f'{song.path}\n')
+
+    def load_m3u(self, filepath: str):
+        """从 .m3u 文件加载播放列表。"""
+        self.songs.clear()
+        self.current_selection_index = 0
+        if not os.path.exists(filepath):
+            return
+        with open(filepath, 'r', encoding='utf-8') as f:
+            title = ""
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#EXTM3U'):
+                    continue
+                if line.startswith('#EXTINF:'):
+                    title = line.split(',', 1)[-1]
+                elif not line.startswith('#'):
+                    path = line
+                    if os.path.exists(path):
+                        # 如果没有从 #EXTINF 解析出标题，则使用文件名
+                        if not title:
+                            title = os.path.splitext(os.path.basename(path))[0]
+                        self.songs.append(Song(title=title, path=path))
+                    title = "" # 重置标题
+
+    def save_m3u(self, filepath: str):
+        """将当前播放列表保存到 .m3u 文件。"""
+        # 确保目录存在
+        dir_path = os.path.dirname(filepath)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+            
+        with open(filepath, 'w', encoding='utf-8') as f:
+            # M3U 文件的标准头部
+            f.write('#EXTM3U\n')
+            for song in self.songs:
+                # 写入扩展信息（可选，但更标准）
+                f.write(f'#EXTINF:-1,{song.title}\n')
+                # 写入文件路径
+                f.write(f'{song.path}\n')
+
+    def load_m3u(self, filepath: str):
+        """从 .m3u 文件加载播放列表。"""
+        self.songs.clear()
+        self.current_selection_index = 0
+        
+        if not os.path.exists(filepath):
+            return # 文件不存在，则加载一个空列表
+
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#EXTM3U'):
+                    continue
+                
+                # 如果是文件路径行
+                if not line.startswith('#'):
+                    path = line
+                    # 尝试从前一行 #EXTINF 中解析标题
+                    title = os.path.splitext(os.path.basename(path))[0]
+                    self.songs.append(Song(title=title, path=path))
+
 if __name__ == '__main__':
     # --- 测试 Playlist 模块 ---
     playlist = Playlist()
