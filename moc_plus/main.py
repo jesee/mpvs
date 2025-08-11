@@ -441,6 +441,7 @@ def main():
     parser = argparse.ArgumentParser(prog="mpvs", description="MPVS Terminal Music Player")
     parser.add_argument("-p", "--play", action="store_true", help="Start playing in background (daemon mode)")
     parser.add_argument("-x", "--exit", action="store_true", help="Stop the background daemon if running")
+    parser.add_argument("-n", "--next", action="store_true", help="Tell daemon to play next track")
     args = parser.parse_args()
 
     config_dir = os.path.expanduser("~/.mpvs")
@@ -515,6 +516,18 @@ def main():
             print(f"mpvs: failed to stop daemon: {e}")
         return
 
+    if args.next:
+        pid = read_pid()
+        if not pid or not is_process_running(pid):
+            print("mpvs: no running daemon found")
+            return
+        try:
+            os.kill(pid, signal.SIGUSR1)
+            print("mpvs: sent NEXT to daemon")
+        except Exception as e:
+            print(f"mpvs: failed to send NEXT: {e}")
+        return
+
     if args.play:
         # If a daemon is already running, do nothing
         pid = read_pid()
@@ -542,13 +555,32 @@ def main():
             return
 
         playlist = Playlist()
-        current_song = playlist.get_current_song()
+        songs = playlist.songs
+        current_index = playlist.current_selection_index if songs else 0
+
+        def play_by_index(new_index: int) -> None:
+            nonlocal current_index
+            if not songs:
+                return
+            current_index = new_index % len(songs)
+            song = songs[current_index]
+            if os.path.exists(song.path):
+                player.play(song.path)
+
+        current_song = songs[current_index] if songs else None
         if current_song and os.path.exists(current_song.path):
             player.play(current_song.path)
         else:
             # Nothing to play; exit daemon
             remove_pid()
             return
+
+        # Handle NEXT track via SIGUSR1
+        def handle_next(_signum, _frame):
+            if songs:
+                play_by_index(current_index + 1)
+        with contextlib.suppress(Exception):
+            signal.signal(signal.SIGUSR1, handle_next)
 
         # Keep the daemon alive until signaled to exit
         try:
