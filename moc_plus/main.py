@@ -1,4 +1,8 @@
 import os
+import sys
+import signal
+import argparse
+import contextlib
 import re
 import threading
 import time
@@ -434,6 +438,129 @@ class MocPlusApp(App):
         self.pop_screen() # 添加后自动返回主屏幕
 
 def main():
+    parser = argparse.ArgumentParser(prog="mpvs", description="MPVS Terminal Music Player")
+    parser.add_argument("-p", "--play", action="store_true", help="Start playing in background (daemon mode)")
+    parser.add_argument("-x", "--exit", action="store_true", help="Stop the background daemon if running")
+    args = parser.parse_args()
+
+    config_dir = os.path.expanduser("~/.mpvs")
+    os.makedirs(config_dir, exist_ok=True)
+    pid_file = os.path.join(config_dir, "mpvs.pid")
+
+    def is_process_running(pid: int) -> bool:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        else:
+            return True
+
+    def read_pid() -> int | None:
+        try:
+            with open(pid_file, "r", encoding="utf-8") as f:
+                pid_str = f.read().strip()
+                return int(pid_str) if pid_str else None
+        except Exception:
+            return None
+
+    def write_pid() -> None:
+        with open(pid_file, "w", encoding="utf-8") as f:
+            f.write(str(os.getpid()))
+
+    def remove_pid() -> None:
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(pid_file)
+
+    def daemonize() -> None:
+        # First fork
+        try:
+            pid = os.fork()
+            if pid > 0:
+                os._exit(0)
+        except OSError:
+            os._exit(1)
+        # Detach from terminal
+        os.setsid()
+        os.umask(0)
+        # Second fork
+        try:
+            pid = os.fork()
+            if pid > 0:
+                os._exit(0)
+        except OSError:
+            os._exit(1)
+        # Redirect stdio to /dev/null
+        sys.stdout.flush(); sys.stderr.flush()
+        with open(os.devnull, 'rb') as fnull:
+            os.dup2(fnull.fileno(), sys.stdin.fileno())
+        with open(os.devnull, 'ab') as fnull_w:
+            os.dup2(fnull_w.fileno(), sys.stdout.fileno())
+            os.dup2(fnull_w.fileno(), sys.stderr.fileno())
+
+    if args.exit:
+        pid = read_pid()
+        if not pid:
+            print("mpvs: no running daemon found")
+            return
+        if not is_process_running(pid):
+            remove_pid()
+            print("mpvs: no running daemon found")
+            return
+        try:
+            os.kill(pid, signal.SIGTERM)
+            print("mpvs: sent exit signal to daemon")
+        except Exception as e:
+            print(f"mpvs: failed to stop daemon: {e}")
+        return
+
+    if args.play:
+        # If a daemon is already running, do nothing
+        pid = read_pid()
+        if pid and is_process_running(pid):
+            print("mpvs: daemon already running")
+            return
+
+        # Start daemon process
+        daemonize()
+        write_pid()
+
+        # Graceful shutdown handler
+        shutting_down = {"flag": False}
+        def handle_term(_signum, _frame):
+            shutting_down["flag"] = True
+        signal.signal(signal.SIGTERM, handle_term)
+        signal.signal(signal.SIGINT, handle_term)
+
+        # Headless playback: load playlist and play current selection if exists
+        try:
+            player = Player()
+        except RuntimeError:
+            # mpv not installed; nothing to do
+            remove_pid()
+            return
+
+        playlist = Playlist()
+        current_song = playlist.get_current_song()
+        if current_song and os.path.exists(current_song.path):
+            player.play(current_song.path)
+        else:
+            # Nothing to play; exit daemon
+            remove_pid()
+            return
+
+        # Keep the daemon alive until signaled to exit
+        try:
+            while not shutting_down["flag"]:
+                time.sleep(0.5)
+        finally:
+            with contextlib.suppress(Exception):
+                player.quit()
+            remove_pid()
+        return
+
+    # Default: run TUI app (foreground)
     app = MocPlusApp()
     app.run()
 
