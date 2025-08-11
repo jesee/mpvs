@@ -199,6 +199,7 @@ class MocPlusApp(App):
         ("q", "quit", "Quit"),
         ("/", "push_screen('search')", "Search"),
         ("p", "toggle_pause", "Play/Pause"),
+        ("space", "toggle_pause", "Play/Pause"),
         ("l", "toggle_lyrics", "Show Lyrics"),
         ("delete", "delete_song", "Delete Song"),
         ("c", "clear_playlist", "Clear Playlist"),
@@ -240,7 +241,12 @@ class MocPlusApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.player = Player()
+        try:
+            self.player = Player()
+        except RuntimeError as e:
+            # mpv 未安装等情况时给出提示，但仍允许浏览/管理播放列表
+            self.player = None
+            self.status_text = str(e)
         self.action_load_playlist(self.default_playlist_path)
         self.query_one("#playlist_listview").focus()
 
@@ -285,18 +291,21 @@ class MocPlusApp(App):
 
         self._update_playlist_view()
         if added_count > 0:
-            self.status_text = f"Added {added_count} new song(s). Press Ctrl+S to save."
+            self.status_text = f"Added {added_count} new song(s). Press 's' to save."
         else:
             self.status_text = "Download complete. No new songs added to playlist."
 
     def _update_playlist_view(self):
         list_view = self.query_one("#playlist_listview", ListView)
+        previous_index = list_view.index
         list_view.clear()
         if not self.playlist.songs:
             list_view.append(ListItem(Static("Playlist is empty.")))
         else:
             for song in self.playlist.songs:
                 list_view.append(SongItem(song))
+            if previous_index is not None:
+                list_view.index = min(previous_index, len(self.playlist.songs) - 1)
 
     def action_clear_playlist(self) -> None:
         self.playlist.clear()
@@ -339,7 +348,7 @@ class MocPlusApp(App):
         if self.playlist.songs:
             new_index = min(index_to_delete, len(self.playlist.songs) - 1)
             list_view.index = new_index
-        self.status_text = "Song removed. Press Ctrl+S to save changes."
+        self.status_text = "Song removed. Press 's' to save changes."
 
     def action_toggle_pause(self) -> None:
         if self.player: self.player.toggle_pause()
@@ -348,6 +357,9 @@ class MocPlusApp(App):
         if event.list_view.id == "playlist_listview":
             if event.item and hasattr(event.item, 'song_data'):
                 self.status_text = f"Selected: {event.item.song_data.title}"
+            # 同步内部播放列表选择索引以保持一致
+            if event.list_view.index is not None:
+                self.playlist.current_selection_index = event.list_view.index
 
     def on_song_item_clicked(self, event: SongItem.Clicked) -> None:
         if isinstance(event.item.parent, ListView) and event.item.parent.id == "search_results_list":
@@ -371,9 +383,22 @@ class MocPlusApp(App):
         list_view = self.query_one("#playlist_listview", ListView)
         if list_view.highlighted_child and hasattr(list_view.highlighted_child, 'song_data'):
             song_to_play: Song = list_view.highlighted_child.song_data
+            if not os.path.exists(song_to_play.path):
+                self.status_text = "File not found. It may have been moved or deleted."
+                return
             if self.player:
                 self.player.play(song_to_play.path)
                 self.status_text = f"Playing: {song_to_play.title}"
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """当列表项通过 Enter 被选择时触发。
+        在播放列表中按回车时，开始播放当前高亮歌曲。
+        """
+        if event.list_view.id == "playlist_listview":
+            # 仅当选择来自播放列表 ListView 时处理
+            self.action_select_song()
+            # 防止进一步冒泡造成重复行为或蜂鸣
+            event.stop()
 
     def watch_status_text(self, new_text: str) -> None:
         self.query_one("#status_bar", Static).update(new_text)
@@ -398,7 +423,7 @@ class MocPlusApp(App):
         
         added_count = len(self.playlist.songs) - initial_count
         if added_count > 0:
-            self.status_text = f"Added {added_count} song(s). Press Ctrl+S to save."
+            self.status_text = f"Added {added_count} song(s). Press 's' to save."
             self._update_playlist_view()
         else:
             self.status_text = "No new songs were added."
