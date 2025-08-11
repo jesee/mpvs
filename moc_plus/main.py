@@ -100,7 +100,6 @@ class SearchScreen(Screen):
         ("n", "next_page", "Next Page"),
         ("p", "previous_page", "Prev Page"),
         ("a", "download_all", "Download All"),
-        # Enter is now handled by the App's on_list_view_selected
     ]
 
     def __init__(self):
@@ -142,21 +141,23 @@ class SearchScreen(Screen):
         self.app.call_from_thread(self.app.on_search_finished, result)
 
     def download_worker(self, songs_to_download: list[dict]):
-        downloaded_count = 0
+        downloaded_songs = []
         errors = []
-        download_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "downloads"))
+        download_dir = self.app.downloads_dir
         for song_data in songs_to_download:
             try:
                 song_info = downloader.get_song_info(song_data["id"])
-                downloader.download_song_and_lrc(song_info, download_dir)
-                downloaded_count += 1
-            except Exception:
+                final_path = downloader.download_song_and_lrc(song_info, download_dir)
+                new_song = Song(title=song_info['title'], path=final_path)
+                downloaded_songs.append(new_song)
+            except Exception as e:
+                self.app.log(f"Download failed for {song_data.get('title', 'N/A')}: {e}")
                 errors.append(song_data["title"])
-        result = (downloaded_count, errors)
+        
+        result = (downloaded_songs, errors)
         self.app.call_from_thread(self.app.on_download_finished, result)
 
     def _trigger_download(self, item: ListItem):
-        """触发单曲下载的通用方法。"""
         if not hasattr(item, "song_data"): return
         song_data = item.song_data
         self.app.sub_title = f"Downloading '{song_data['title']}'..."
@@ -164,12 +165,10 @@ class SearchScreen(Screen):
         thread.start()
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
-        """当用户选择一项时更新副标题。"""
         if event.item and hasattr(event.item, "song_data"):
             self.app.sub_title = f"Selected: {event.item.song_data['title']}"
 
     def on_song_item_clicked(self, event: SongItem.Clicked) -> None:
-        """处理双击下载。"""
         current_click_time = time.time()
         if (current_click_time - self.last_click_time < 0.5) and (self.last_clicked_item is event.item):
             self._trigger_download(event.item)
@@ -201,7 +200,6 @@ class MocPlusApp(App):
         ("/", "push_screen('search')", "Search"),
         ("p", "toggle_pause", "Play/Pause"),
         ("l", "toggle_lyrics", "Show Lyrics"),
-        ("r", "import_from_folders", "Import from Folders"),
         ("delete", "delete_song", "Delete Song"),
         ("c", "clear_playlist", "Clear Playlist"),
         ("s", "show_save_screen", "Save Playlist"),
@@ -213,18 +211,39 @@ class MocPlusApp(App):
     status_text = var("STATUS: Welcome to MOC-Plus!")
 
     def __init__(self):
-        super().__init__(); self.player: Optional[Player] = None; self.playlist = Playlist()
-        self.config_dir = os.path.expanduser("~/.mpvs"); self.playlist_path = os.path.join(self.config_dir, "default.m3u")
-        if not os.path.exists(self.config_dir): os.makedirs(self.config_dir)
-        self.music_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '斗破苍穹'))
-        self.downloads_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'downloads'))
-        self.last_click_time = 0; self.last_clicked_item = None
+        super().__init__()
+        self.player: Optional[Player] = None
+        self.playlist = Playlist()
+        
+        # --- 路径管理 ---
+        self.config_dir = os.path.expanduser("~/.mpvs")
+        self.default_playlist_path = os.path.join(self.config_dir, "default.m3u")
+        self.current_playlist_path = self.default_playlist_path
+        self.downloads_dir = os.path.expanduser('~/music/mpvs')
+        
+        # --- 状态变量 ---
+        self.last_click_time = 0
+        self.last_clicked_item = None
+
+        # --- 初始化检查 ---
+        os.makedirs(self.config_dir, exist_ok=True)
+        os.makedirs(self.downloads_dir, exist_ok=True)
+        if not os.path.exists(self.default_playlist_path):
+            with open(self.default_playlist_path, "w", encoding="utf-8") as f:
+                f.write("#EXTM3U\n")
+
     def compose(self) -> ComposeResult:
-        yield Header(name="MOC-Plus Terminal Player"); yield Static(id="status_bar")
-        with VerticalScroll(id="playlist_view"): yield ListView(id="playlist_listview")
+        yield Header(name="MOC-Plus Terminal Player")
+        yield Static(id="status_bar")
+        with VerticalScroll(id="playlist_view"):
+            yield ListView(id="playlist_listview")
         yield Footer()
+
     def on_mount(self) -> None:
-        self.player = Player(); self.action_load_playlist(self.playlist_path); self.query_one("#playlist_listview").focus()
+        self.player = Player()
+        self.action_load_playlist(self.default_playlist_path)
+        self.query_one("#playlist_listview").focus()
+
     def on_search_finished(self, result) -> None:
         if not isinstance(self.screen, SearchScreen): return
         search_screen = self.screen
@@ -245,92 +264,110 @@ class MocPlusApp(App):
                     list_item = SongItem(Song(title=song['title'], path=""))
                     list_item.song_data = song
                     list_view.append(list_item)
-        # 搜索完成后，自动聚焦到结果列表
         list_view.focus()
+
     def on_download_finished(self, result) -> None:
-        downloaded_count, errors = result; new_songs_playlist = Playlist()
-        new_songs_playlist.scan_directory(self.downloads_dir); added_count = 0
-        for song in new_songs_playlist.songs:
+        downloaded_songs, errors = result
+        added_count = 0
+        for song in downloaded_songs:
             if not any(p_song.path == song.path for p_song in self.playlist.songs):
-                self.playlist.songs.append(song); added_count += 1
-        if errors: self.sub_title = f"Completed. Downloaded {downloaded_count}. {len(errors)} failed."
-        else: self.sub_title = f"Successfully downloaded {downloaded_count} song(s)."
-        if isinstance(self.screen, SearchScreen): self.pop_screen()
-        self._update_playlist_view()
-        if added_count > 0: self.status_text = f"Added {added_count} new song(s). Press Ctrl+S to save."
-        else: self.status_text = "Download complete. No new songs added to playlist."
-    def _update_playlist_view(self):
-        list_view = self.query_one("#playlist_listview", ListView); list_view.clear()
-        if not self.playlist.songs: list_view.append(ListItem(Static("Playlist is empty.")))
+                self.playlist.songs.append(song)
+                added_count += 1
+        
+        downloaded_count = len(downloaded_songs)
+        if errors:
+            self.sub_title = f"Completed. Downloaded {downloaded_count}. {len(errors)} failed."
         else:
-            for song in self.playlist.songs: list_view.append(SongItem(song))
-    def action_clear_playlist(self) -> None:
-        """清空播放列表并立即保存这个状态。"""
-        self.playlist.clear()
-        self.playlist.save_m3u(self.playlist_path)
+            self.sub_title = f"Successfully downloaded {downloaded_count} song(s)."
+
+        if isinstance(self.screen, SearchScreen):
+            self.pop_screen()
+
         self._update_playlist_view()
-        self.status_text = f"Playlist cleared and saved to {self.playlist_path}"
-    def action_show_load_screen(self): self.push_screen(CommandScreen("Load playlist from:", self.playlist_path, self.action_load_playlist))
-    def action_show_save_screen(self): self.push_screen(CommandScreen("Save playlist as:", self.playlist_path, self.action_save_playlist))
+        if added_count > 0:
+            self.status_text = f"Added {added_count} new song(s). Press Ctrl+S to save."
+        else:
+            self.status_text = "Download complete. No new songs added to playlist."
+
+    def _update_playlist_view(self):
+        list_view = self.query_one("#playlist_listview", ListView)
+        list_view.clear()
+        if not self.playlist.songs:
+            list_view.append(ListItem(Static("Playlist is empty.")))
+        else:
+            for song in self.playlist.songs:
+                list_view.append(SongItem(song))
+
+    def action_clear_playlist(self) -> None:
+        self.playlist.clear()
+        self.playlist.save_m3u(self.current_playlist_path)
+        self._update_playlist_view()
+        self.status_text = f"Playlist cleared and saved to {os.path.basename(self.current_playlist_path)}"
+
+    def action_show_save_screen(self):
+        self.push_screen(CommandScreen("Save playlist as:", self.current_playlist_path, self.action_save_playlist))
+
     def action_load_playlist(self, path: str):
-        self.playlist_path = path; self.playlist.load_m3u(self.playlist_path)
-        self._update_playlist_view(); self.status_text = f"Loaded playlist from {self.playlist_path}"
+        self.current_playlist_path = path
+        self.playlist.load_m3u(self.current_playlist_path)
+        self._update_playlist_view()
+        self.status_text = f"Loaded playlist from {os.path.basename(self.current_playlist_path)}"
+
     def action_save_playlist(self, path: str):
-        self.playlist_path = path; self.playlist.save_m3u(self.playlist_path)
-        self.status_text = f"Playlist saved to {self.playlist_path}"
-    def action_import_from_folders(self) -> None:
-        self.playlist.scan_directory(self.music_dir); self.playlist.scan_directory(self.downloads_dir)
-        self._update_playlist_view(); self.status_text = "Imported songs from local folders. Press Ctrl+S to save."
+        self.current_playlist_path = path
+        self.playlist.save_m3u(self.current_playlist_path)
+        self.status_text = f"Playlist saved to {os.path.basename(self.current_playlist_path)}"
+
     def action_toggle_lyrics(self) -> None:
-        if isinstance(self.screen, LyricsScreen): self.pop_screen()
+        if isinstance(self.screen, LyricsScreen):
+            self.pop_screen()
         else:
             list_view = self.query_one("#playlist_listview", ListView)
             if list_view.highlighted_child and hasattr(list_view.highlighted_child, 'song_data'):
                 current_song = list_view.highlighted_child.song_data
                 self.push_screen(LyricsScreen(self.player, current_song))
-            else: self.status_text = "Select a song to show lyrics."
+            else:
+                self.status_text = "Select a song to show lyrics."
+
     def action_delete_song(self) -> None:
         list_view = self.query_one("#playlist_listview", ListView)
         if list_view.highlighted_child is None: return
         index_to_delete = list_view.index
         if index_to_delete is None: return
-        self.playlist.delete_song(index_to_delete); self._update_playlist_view()
+        self.playlist.delete_song(index_to_delete)
+        self._update_playlist_view()
         if self.playlist.songs:
-            new_index = min(index_to_delete, len(self.playlist.songs) - 1); list_view.index = new_index
+            new_index = min(index_to_delete, len(self.playlist.songs) - 1)
+            list_view.index = new_index
         self.status_text = "Song removed. Press Ctrl+S to save changes."
+
     def action_toggle_pause(self) -> None:
         if self.player: self.player.toggle_pause()
+
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         if event.list_view.id == "playlist_listview":
             if event.item and hasattr(event.item, 'song_data'):
                 self.status_text = f"Selected: {event.item.song_data.title}"
+
     def on_song_item_clicked(self, event: SongItem.Clicked) -> None:
-        """监听我们自定义的 SongItem.Clicked 消息，处理双击。"""
-        # 双击下载
         if isinstance(event.item.parent, ListView) and event.item.parent.id == "search_results_list":
             current_click_time = time.time()
             if (current_click_time - self.last_click_time < 0.5) and (self.last_clicked_item is event.item):
                 if hasattr(event.item, "song_data"):
-                    # Mypy doesn't know about screen attributes, so we ignore the type error
-                    self.screen._trigger_download(event.item) # type: ignore
+                    self.screen._trigger_download(event.item)
             self.last_click_time = current_click_time
             self.last_clicked_item = event.item
             return
 
-        # 双击播放
         if isinstance(event.item.parent, ListView) and event.item.parent.id == "playlist_listview":
             current_click_time = time.time()
             if (current_click_time - self.last_click_time < 0.5) and (self.last_clicked_item is event.item):
                 if hasattr(event.item, 'song_data'):
-                    song_to_play: Song = event.item.song_data
-                    if self.player:
-                        self.player.play(song_to_play.path)
-                        self.status_text = f"Playing: {song_to_play.title}"
+                    self.action_select_song()
             self.last_click_time = current_click_time
             self.last_clicked_item = event.item
 
     def action_select_song(self) -> None:
-        """处理主播放列表上的回车键事件。"""
         list_view = self.query_one("#playlist_listview", ListView)
         if list_view.highlighted_child and hasattr(list_view.highlighted_child, 'song_data'):
             song_to_play: Song = list_view.highlighted_child.song_data
@@ -340,26 +377,21 @@ class MocPlusApp(App):
 
     def watch_status_text(self, new_text: str) -> None:
         self.query_one("#status_bar", Static).update(new_text)
+
     def action_quit(self) -> None:
-        """退出前自动保存播放列表。"""
-        self.status_text = "Saving playlist..."
-        self.playlist.save_m3u(self.playlist_path)
+        self.status_text = "Saving current playlist..."
+        self.playlist.save_m3u(self.current_playlist_path)
         if self.player: self.player.quit()
         self.exit("Playlist saved. Goodbye!")
     
-    # --- 新增的文件浏览器交互 ---
     def add_path_to_playlist(self, path: str):
-        """由 FileBrowserScreen 调用的回调函数。"""
         added_count = 0
         initial_count = len(self.playlist.songs)
 
-        if os.path.isdir(path):
-            self.playlist.scan_directory(path, append=True)
-        elif os.path.isfile(path):
+        if os.path.isfile(path):
             if path.lower().endswith(".m3u"):
                 self.playlist.load_m3u(path, append=True)
             elif any(path.lower().endswith(ext) for ext in SUPPORTED_EXTENSIONS):
-                # 避免重复添加
                 if not any(song.path == path for song in self.playlist.songs):
                     title = os.path.splitext(os.path.basename(path))[0]
                     self.playlist.songs.append(Song(title=title, path=path))

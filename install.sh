@@ -13,11 +13,11 @@ PROJECT_ROOT="$SCRIPT_DIR"
 
 echo "--- MOC-Plus Standalone Packager ---"
 
-# 1. Check for the virtual environment's Python interpreter.
+# 1. Check for and create the virtual environment if it doesn't exist.
 if [ ! -f "$VENV_PYTHON" ]; then
-    echo "❌ Error: Virtual environment not found or python executable is missing at '$VENV_PYTHON'."
-    echo "Please create the virtual environment first: python3 -m venv venv"
-    exit 1
+    echo "🐍 Virtual environment not found. Creating one at '$SCRIPT_DIR/venv'..."
+    python3 -m venv "$SCRIPT_DIR/venv"
+    echo "   Virtual environment created."
 fi
 
 echo "🐍 Found Python interpreter at: $VENV_PYTHON"
