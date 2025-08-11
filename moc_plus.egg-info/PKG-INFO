@@ -1,3 +1,29 @@
+Metadata-Version: 2.4
+Name: moc-plus
+Version: 0.1.0
+Summary: A command-line music player
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: beautifulsoup4==4.13.4
+Requires-Dist: certifi==2025.8.3
+Requires-Dist: charset-normalizer==3.4.3
+Requires-Dist: idna==3.10
+Requires-Dist: linkify-it-py==2.0.3
+Requires-Dist: lxml==6.0.0
+Requires-Dist: markdown-it-py==3.0.0
+Requires-Dist: mdit-py-plugins==0.4.2
+Requires-Dist: mdurl==0.1.2
+Requires-Dist: platformdirs==4.3.8
+Requires-Dist: Pygments==2.19.2
+Requires-Dist: python-mpv==1.0.8
+Requires-Dist: requests==2.32.4
+Requires-Dist: rich==14.1.0
+Requires-Dist: soupsieve==2.7
+Requires-Dist: textual==5.3.0
+Requires-Dist: typing_extensions==4.14.1
+Requires-Dist: uc-micro-py==1.0.3
+Requires-Dist: urllib3==2.5.0
+
 # MPVS: A Modern Terminal Music Player
 
 `MPVS` 是一款功能强大的、在终端中运行的音乐播放器，其灵感来源于经典的 MOC (Music On Console)。它旨在提供一个现代化的、交互友好的 TUI (文本用户界面)，并整合了在线音乐搜索、下载、以及精准的歌词同步功能。
@@ -25,59 +51,42 @@
     -   按 `o` 键打开，轻松浏览本地文件系统。
     -   按 `a` 键可将音频文件、`.m3u` 歌单或整个文件夹内容追加到当前播放列表。
 
-## 🚀 构建指南
+## 🚀 安装指南
 
-本指南将引导您如何从源代码构建一个独立的、可直接运行的 `moc-plus` 可执行文件。
+**依赖:**
 
-### 依赖
+在安装 `MPVS` 之前，你必须在你的系统上安装 `mpv`。
 
-在开始之前，请确保您的系统上已安装以下软件：
--   `python3` 和 `python3-venv`
--   `mpv` (这是程序运行所必需的播放后端)
+-   **Debian/Ubuntu**: `sudo apt update && sudo apt install mpv`
+-   **Arch Linux**: `sudo pacman -S mpv`
+-   **macOS**: `brew install mpv`
 
-在 Debian/Ubuntu 系统上，您可以通过以下命令安装：
-```bash
-sudo apt update && sudo apt install mpv python3-venv
-```
+**安装步骤:**
 
-### 构建步骤
+1.  **克隆仓库 (或下载代码):**
+    ```bash
+    git clone <your-repo-url>
+    cd moc-plus
+    ```
 
-1.  **创建并激活 Python 虚拟环境**
-
-    在项目的根目录 (即 `mpvs/` 目录) 下执行：
+2.  **创建并激活 Python 虚拟环境:**
     ```bash
     python3 -m venv venv
     source venv/bin/activate
     ```
 
-2.  **安装项目依赖**
-
-    根据您的测试，我们需要进入 `moc_plus` 目录来安装依赖，然后再返回。
+3.  **安装所需的 Python 包:**
     ```bash
-    cd moc_plus
     pip install -r requirements.txt
-    cd ..
     ```
-
-3.  **执行构建脚本**
-
-    现在，运行根目录下的构建脚本来打包应用。
-    ```bash
-    # 赋予脚本执行权限 (仅需首次执行)
-    chmod +x install.sh
-
-    # 运行打包程序
-    ./install.sh
-    ```
-    脚本会自动完成所有工作，包括安装 `PyInstaller`、清理旧文件以及打包。
+    *(我们稍后会创建这个 `requirements.txt` 文件)*
 
 ## ⌨️ 如何使用
 
-构建成功后，最终的可执行文件会位于 `dist/` 目录下。
+直接运行主程序即可启动:
 
-直接运行即可启动程序：
 ```bash
-./dist/moc-plus
+python3 main.py
 ```
 
 ### 全局快捷键

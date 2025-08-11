@@ -1,0 +1,2 @@
+[console_scripts]
+moc-plus = moc_plus.main:main

@@ -1,0 +1,7 @@
+
+# Environments
+venv/
+
+# Build artifacts
+build/
+dist/
