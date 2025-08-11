@@ -395,9 +395,13 @@ class MocPlusApp(App):
         在播放列表中按回车时，开始播放当前高亮歌曲。
         """
         if event.list_view.id == "playlist_listview":
-            # 仅当选择来自播放列表 ListView 时处理
+            # 如果是鼠标单击导致的选中，Textual 同样会派发 Selected 事件。
+            # 为了避免单击即播放，这里检测最近一次点击时间并忽略该事件，
+            # 仅保留键盘 Enter 或双击触发的播放。
+            if (time.time() - self.last_click_time) < 0.3 and (self.last_clicked_item is getattr(event, 'item', None)):
+                event.stop()
+                return
             self.action_select_song()
-            # 防止进一步冒泡造成重复行为或蜂鸣
             event.stop()
 
     def watch_status_text(self, new_text: str) -> None:
