@@ -80,6 +80,14 @@ sudo apt update && sudo apt install mpv python3-venv
 ./dist/mpvs
 ```
 
+### 命令行参数（后台守护进程）
+
+- `mpvs -p` 或 `mpvs --play`: 以后台守护进程方式启动，并播放当前播放列表的当前选中歌曲（或第一首）。关闭终端不会影响播放。
+- `mpvs -x` 或 `mpvs --exit`: 停止后台守护进程（优雅退出）。
+- `mpvs -n` 或 `mpvs --next`: 让后台守护进程切到下一首歌曲。
+
+实现细节：后台模式使用 `~/.mpvs/mpvs.pid` 记录进程 ID；如未找到运行中的守护进程会友好提示。
+
 ### 全局快捷键
 
 | 按键              | 功能                               |
