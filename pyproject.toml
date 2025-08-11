@@ -31,4 +31,4 @@ dependencies = [
 ]
 
 [project.scripts]
-moc-plus = "moc_plus.main:main"
+mpvs = "moc_plus.main:main"

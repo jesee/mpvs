@@ -27,7 +27,7 @@
 
 ## 🚀 构建指南
 
-本指南将引导您如何从源代码构建一个独立的、可直接运行的 `moc-plus` 可执行文件。
+本指南将引导您如何从源代码构建一个独立的、可直接运行的 `mpvs` 可执行文件。
 
 ### 依赖
 
@@ -77,7 +77,7 @@ sudo apt update && sudo apt install mpv python3-venv
 
 直接运行即可启动程序：
 ```bash
-./dist/moc-plus
+./dist/mpvs
 ```
 
 ### 全局快捷键

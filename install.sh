@@ -11,7 +11,7 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 VENV_PYTHON="$SCRIPT_DIR/venv/bin/python"
 PROJECT_ROOT="$SCRIPT_DIR"
 
-echo "--- MOC-Plus Standalone Packager ---"
+echo "--- MPVS Standalone Packager ---"
 
 # 1. Check for and create the virtual environment if it doesn't exist.
 if [ ! -f "$VENV_PYTHON" ]; then
@@ -36,21 +36,21 @@ echo "   PyInstaller is ready."
 
 # 4. Clean up previous build artifacts to ensure a fresh build.
 echo "🧹 Cleaning up previous build artifacts (dist/, build/, *.spec)..."
-rm -rf dist/ build/ moc-plus.spec
+rm -rf dist/ build/ moc-plus.spec mpvs.spec
 echo "   Cleanup complete."
 
 # 5. Run PyInstaller with the correct entry point (run.py) and options.
 echo "🚀 Running PyInstaller to build the standalone executable..."
 echo "   This might take a moment."
 
-"$VENV_PYTHON" -m PyInstaller --onefile --name moc-plus --add-data "moc_plus/tui.css:moc_plus" run.py
+"$VENV_PYTHON" -m PyInstaller --onefile --name mpvs --add-data "moc_plus/tui.css:moc_plus" run.py
 
 # 6. Verify the result and provide a clear success message.
-if [ -f "dist/moc-plus" ]; then
+if [ -f "dist/mpvs" ]; then
     echo ""
     echo "✅ Success! The standalone executable has been created."
     echo "👉 You can now run your application directly:"
-    echo "   $PROJECT_ROOT/dist/moc-plus"
+    echo "   $PROJECT_ROOT/dist/mpvs"
 else
     echo ""
     echo "❌ Error: Build failed. The executable was not found in the 'dist' directory."
