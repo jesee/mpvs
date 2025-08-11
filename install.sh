@@ -21,25 +21,31 @@ if [ ! -f "$VENV_PYTHON" ]; then
 fi
 
 echo "🐍 Found Python interpreter at: $VENV_PYTHON"
+
+# 2. Install/update dependencies from requirements.txt inside the moc_plus directory.
+echo "📦 Installing dependencies from moc_plus/requirements.txt..."
+"$VENV_PYTHON" -m pip install -r "$PROJECT_ROOT/moc_plus/requirements.txt"
+echo "   Dependencies are up to date."
+
 cd "$PROJECT_ROOT"
 
-# 2. Ensure PyInstaller is installed in the virtual environment.
+# 3. Ensure PyInstaller is installed in the virtual environment.
 echo "📦 Checking and installing PyInstaller..."
 "$VENV_PYTHON" -m pip install pyinstaller &> /dev/null
 echo "   PyInstaller is ready."
 
-# 3. Clean up previous build artifacts to ensure a fresh build.
+# 4. Clean up previous build artifacts to ensure a fresh build.
 echo "🧹 Cleaning up previous build artifacts (dist/, build/, *.spec)..."
 rm -rf dist/ build/ moc-plus.spec
 echo "   Cleanup complete."
 
-# 4. Run PyInstaller with the correct entry point (run.py) and options.
+# 5. Run PyInstaller with the correct entry point (run.py) and options.
 echo "🚀 Running PyInstaller to build the standalone executable..."
 echo "   This might take a moment."
 
 "$VENV_PYTHON" -m PyInstaller --onefile --name moc-plus --add-data "moc_plus/tui.css:moc_plus" run.py
 
-# 5. Verify the result and provide a clear success message.
+# 6. Verify the result and provide a clear success message.
 if [ -f "dist/moc-plus" ]; then
     echo ""
     echo "✅ Success! The standalone executable has been created."
