@@ -575,6 +575,15 @@ def main():
             remove_pid()
             return
 
+        # Auto-advance when a file ends
+        try:
+            @player.mpv.event_callback('end-file')  # type: ignore[attr-defined]
+            def _on_end_file(_event):
+                if songs:
+                    play_by_index(current_index + 1)
+        except Exception:
+            pass
+
         # Handle NEXT track via SIGUSR1
         def handle_next(_signum, _frame):
             if songs:
